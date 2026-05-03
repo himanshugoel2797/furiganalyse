@@ -48,13 +48,13 @@ from furiganalyse.parsing import process_tree
             "Override furigana",
             '<body>はじめに、<ruby>第一<rt>ファースト</rt></ruby>歩。<ruby>終<rt>おわり</rt></ruby></body>',
             "replace",
-            '<body>はじめに、<ruby>第一歩<rt>だいいっぽ</rt></ruby>。<ruby>終<rt>おわり</rt></ruby></body>',
+            '<body>はじめに、<ruby>第<rt>だい</rt></ruby><ruby>一<rt>いち</rt></ruby><ruby>歩<rt>ほ</rt></ruby>。<ruby>終<rt>おわり</rt></ruby></body>',
         ),
         (
             "Override furigana, handling rb elements",
             "<body>大人<ruby><rb>達</rb><rt>あああ</rt></ruby>の間に</body>",
             "replace",
-            "<body><ruby>大人<rt>おとな</rt></ruby><ruby>達<rt>たち</rt></ruby>の<ruby>間<rt>ま</rt></ruby>に</body>"
+            "<body><ruby>大人<rt>おとな</rt></ruby><ruby>達<rt>たち</rt></ruby>の<ruby>間<rt>あいだ</rt></ruby>に</body>"
         ),
         (
             "Text may be positioned before, inside or after elements",
@@ -75,8 +75,8 @@ from furiganalyse.parsing import process_tree
             """
             <body class="p-text">
               <div class="main2">
-                <p id="1">1つの<ruby>成功体験<rt>せいこうたいけん</rt></ruby>は<a>ハーバード<ruby>大学<rt>だいがく</rt></ruby>。</a>その<ruby>真<rt>ま</rt></ruby>ん<ruby>中<rt>なか</rt></ruby>を<span>はじめに、<ruby>第一<rt>だいいち</rt></ruby>。</span>
-                </p>その<ruby>後<rt>ご</rt></ruby>で</div>
+                <p id="1">1つの<ruby>成功<rt>せいこう</rt></ruby><ruby>体験<rt>たいけん</rt></ruby>は<a>ハーバード<ruby>大学<rt>だいがく</rt></ruby>。</a>その<ruby>真<rt>ま</rt></ruby>ん<ruby>中<rt>なか</rt></ruby>を<span>はじめに、<ruby>第<rt>だい</rt></ruby><ruby>一<rt>いち</rt></ruby>。</span>
+                </p>その<ruby>後<rt>あと</rt></ruby>で</div>
             </body>
             """,
         ),
@@ -96,7 +96,7 @@ from furiganalyse.parsing import process_tree
             "Applying the a title tag in the head",
             '<head><title>世界一やさしい「やりたいこと」の見つけ方　人生のモヤモヤから解放される自己理解メソッド</title></head>',
             "add",
-            '<head><title><ruby>世界一<rt>せかいいち</rt></ruby>やさしい「やりたいこと」の<ruby>見<rt>み</rt></ruby>つけ<ruby>方<rt>かた</rt></ruby>　<ruby>人生<rt>じんせい</rt></ruby>のモヤモヤから<ruby>解放<rt>かいほう</rt></ruby>される<ruby>自己<rt>じこ</rt></ruby><ruby>理解<rt>りかい</rt></ruby>メソッド</title></head>',
+            '<head><title><ruby>世界<rt>せかい</rt></ruby><ruby>一<rt>いち</rt></ruby>やさしい「やりたいこと」の<ruby>見<rt>み</rt></ruby>つけ<ruby>方<rt>かた</rt></ruby>　<ruby>人生<rt>じんせい</rt></ruby>のモヤモヤから<ruby>解放<rt>かいほう</rt></ruby>される<ruby>自己<rt>じこ</rt></ruby><ruby>理解<rt>りかい</rt></ruby>メソッド</title></head>',
         ),
         (
             "Don't override existing furigana",
