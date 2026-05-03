@@ -4,23 +4,21 @@ LABEL org.opencontainers.image.authors="itsupera@gmail.com"
 # switch to root user to use apt-get
 USER root
 
-# Install mecab and mecab-ipadic from Debian packages
+# Install the MeCab runtime. The dictionary is provided by the bundled
+# `unidic-lite` Python package (a transitive dep of the furigana fork below),
+# so we no longer install mecab-ipadic / mecab-ipadic-neologd here.
 RUN apt-get update && apt-get install -y \
   git curl file python3-poetry \
-  mecab=0.996-14+b14 mecab-ipadic=2.7.0-20070801+main-3 mecab-ipadic-utf8=2.7.0-20070801+main-3 libmecab-dev=0.996-14+b14 \
+  mecab=0.996-14+b14 libmecab-dev=0.996-14+b14 \
   sudo \
   pandoc calibre \
   && rm -rf /var/lib/apt/lists/*
 
-# NEologd
-RUN git clone --depth 1 https://github.com/neologd/mecab-ipadic-neologd.git
-RUN cd mecab-ipadic-neologd && ./bin/install-mecab-ipadic-neologd -n -a -y
-RUN rm -rf mecab-ipadic-neologd
-
-# Move config file from /etc/mecabrc (default install path on Debian) to what the program expects
-# Setup MeCab to use mecab-ipadic-neologd dict by default
-RUN cp /etc/mecabrc /usr/local/etc/mecabrc && \
-  sed -i "s'^dicdir.*'dicdir = /usr/lib/x86_64-linux-gnu/mecab/dic/mecab-ipadic-neologd'g" /usr/local/etc/mecabrc
+# MeCab on Debian looks for /usr/local/etc/mecabrc; the apt package only
+# installs /etc/mecabrc, so mirror it. The furigana library passes -d
+# <unidic_lite.DICDIR> at Tagger construction time, so the dicdir entry in
+# this file is irrelevant for our use, but MeCab refuses to start without it.
+RUN cp /etc/mecabrc /usr/local/etc/mecabrc
 
 # Setup our dependencies
 WORKDIR /workdir
