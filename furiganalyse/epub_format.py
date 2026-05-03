@@ -20,6 +20,7 @@ def process_epub_file(
     writing_mode,
     output_format,
     exclude_words: Optional[Set[str]] = None,
+    furigana_repeat_limit: Optional[int] = None,
 ):
     if writing_mode is not None:
         update_writing_mode(unzipped_input_fpath, writing_mode)
@@ -29,7 +30,7 @@ def process_epub_file(
             if os.path.splitext(file)[1] in {".html", ".xhtml"}:
                 logging.info("    Processing %s", file)
                 html_filepath = os.path.join(root, file)
-                tree = process_html(html_filepath, mode, exclude_words)
+                tree = process_html(html_filepath, mode, exclude_words, furigana_repeat_limit)
                 if output_format in {OutputFormat.many_txt, OutputFormat.single_txt, OutputFormat.apkg}:
                     txt_outputfile = os.path.splitext(html_filepath)[0] + '.txt'
                     convert_html_to_txt(tree, txt_outputfile)

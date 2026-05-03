@@ -27,6 +27,7 @@ def main(
     known_words_list: Optional[str] = None,
     custom_word_list_path: Optional[str] = None,
     custom_word_list_limit: Optional[int] = None,
+    furigana_repeat_limit: Optional[int] = None,
 ):
     # Load the known words list if specified (custom path takes precedence)
     exclude_words = None
@@ -51,7 +52,12 @@ def main(
 
         logging.info("Processing the files ...")
         process_epub_file(
-            unzipped_input_fpath, furigana_mode, writing_mode, output_format, exclude_words
+            unzipped_input_fpath,
+            furigana_mode,
+            writing_mode,
+            output_format,
+            exclude_words,
+            furigana_repeat_limit,
         )
 
         logging.info("Creating the output file ...")

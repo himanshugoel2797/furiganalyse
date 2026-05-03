@@ -94,6 +94,7 @@ async def task_handler(
     known_words_list: str = Form(default=""),
     custom_word_list: UploadFile = File(default=None),
     custom_word_list_limit: int = Form(default=0),
+    furigana_repeat_limit: int = Form(default=0),
     redirect: bool = Form(default=True),
 ):
     new_task = Job()
@@ -149,6 +150,7 @@ async def task_handler(
         known_words_list,
         custom_word_list_path,
         custom_word_list_limit,
+        furigana_repeat_limit,
     )
 
     if redirect:
@@ -171,6 +173,7 @@ def furiganalyse_task(
     known_words_list: str = "",
     custom_word_list_path: str = None,
     custom_word_list_limit: int = 0,
+    furigana_repeat_limit: int = 0,
 ) -> str:
     input_filepath = os.path.join(task_folder, filename)
     output_filename = generate_output_filename(filename, output_format)
@@ -187,6 +190,7 @@ def furiganalyse_task(
             known_words_list=known_words_list if known_words_list else None,
             custom_word_list_path=custom_word_list_path,
             custom_word_list_limit=custom_word_list_limit if custom_word_list_limit > 0 else None,
+            furigana_repeat_limit=furigana_repeat_limit if furigana_repeat_limit > 0 else None,
         )
     except Exception:
         logging.error("Error while processing %s: %s", input_filepath, traceback.format_exc())

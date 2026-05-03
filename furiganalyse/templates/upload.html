@@ -13,14 +13,17 @@
             var dropdown = document.getElementById('known_words_list');
             var customWordListContainer = document.getElementById('custom_word_list_container');
             var customWordListInput = document.getElementById('custom_word_list');
+            var repeatLimitContainer = document.getElementById('furigana_repeat_limit_container');
 
             if (removeSelected) {
                 dropdown.value = '';
                 dropdown.disabled = true;
                 customWordListContainer.style.display = 'none';
                 customWordListInput.value = '';
+                repeatLimitContainer.style.display = 'none';
             } else {
                 dropdown.disabled = false;
+                repeatLimitContainer.style.display = 'block';
                 updateCustomWordListVisibility();
             }
         }
@@ -99,11 +102,22 @@
         }
 
         function updateSliderTrack() {
-            var slider = document.getElementById('custom_word_list_limit');
+            paintSliderTrack(document.getElementById('custom_word_list_limit'));
+        }
+
+        function paintSliderTrack(slider) {
             var value = parseInt(slider.value);
             var max = parseInt(slider.max);
             var percent = max > 0 ? (value / max) * 100 : 0;
             slider.style.background = 'linear-gradient(to right, #0d6efd 0%, #0d6efd ' + percent + '%, #dee2e6 ' + percent + '%, #dee2e6 100%)';
+        }
+
+        function updateRepeatLimitLabel() {
+            var slider = document.getElementById('furigana_repeat_limit');
+            var label = document.getElementById('furigana_repeat_limit_label');
+            var value = parseInt(slider.value);
+            label.textContent = value === 0 ? 'every' : value;
+            paintSliderTrack(slider);
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -113,7 +127,9 @@
             document.getElementById('known_words_list').addEventListener('change', updateCustomWordListVisibility);
             document.getElementById('custom_word_list').addEventListener('change', updateSliderFromFile);
             document.getElementById('custom_word_list_limit').addEventListener('input', updateSliderLabel);
+            document.getElementById('furigana_repeat_limit').addEventListener('input', updateRepeatLimitLabel);
             updateApplyToDropdown();
+            updateRepeatLimitLabel();
         });
     </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-gH2yIJqKdNHPEq0n4Mqa/HGKIhSkIHeL5AyhkYV8i59U5AR6csBvApHHNl/vI1Bx" crossorigin="anonymous">
@@ -252,6 +268,15 @@
                             <label for="custom_word_list_limit" class="form-label">Words to exclude: <span id="custom_word_list_limit_label">No file selected</span></label>
                             <input type="range" class="custom-range-slider" name="custom_word_list_limit" id="custom_word_list_limit" min="0" max="0" value="0">
                         </div>
+                    </div>
+                    <div id="furigana_repeat_limit_container" class="mt-3">
+                        <label for="furigana_repeat_limit" class="form-label">
+                            Show furigana for the first
+                            <span id="furigana_repeat_limit_label">every</span>
+                            occurrence(s) of each reading
+                            <small class="text-muted d-block">Helps with kanji memorization — set to 0 to always show.</small>
+                        </label>
+                        <input type="range" class="custom-range-slider" name="furigana_repeat_limit" id="furigana_repeat_limit" min="0" max="20" value="0">
                     </div>
                 </li>
 

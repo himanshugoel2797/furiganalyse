@@ -127,3 +127,49 @@ def test_process_tree(test_case, xml_str, mode, expected_xml_str):
     expected_tree = ET.fromstring(template.format(expected_xml_str))
 
     assert ET.tostring(tree, encoding='unicode') == ET.tostring(expected_tree, encoding='unicode')
+
+
+@pytest.mark.parametrize(
+    ("test_case", "xml_str", "limit", "expected_xml_str"),
+    [
+        (
+            "Limit of 1 keeps only the first occurrence of each reading",
+            '<body><p>大学に行く。</p><p>大学はとても大きい。</p><p>大学が好き。</p></body>',
+            1,
+            '<body><p><ruby>大学<rt>だいがく</rt></ruby>に<ruby>行<rt>い</rt></ruby>く。</p>'
+            '<p>大学はとても<ruby>大<rt>おお</rt></ruby>きい。</p>'
+            '<p>大学が<ruby>好<rt>す</rt></ruby>き。</p></body>',
+        ),
+        (
+            "Limit of 2 keeps the first two occurrences",
+            '<body><p>大学。</p><p>大学。</p><p>大学。</p><p>大学。</p></body>',
+            2,
+            '<body><p><ruby>大学<rt>だいがく</rt></ruby>。</p>'
+            '<p><ruby>大学<rt>だいがく</rt></ruby>。</p>'
+            '<p>大学。</p>'
+            '<p>大学。</p></body>',
+        ),
+        (
+            "Limit of 0 disables suppression",
+            '<body><p>大学。</p><p>大学。</p></body>',
+            0,
+            '<body><p><ruby>大学<rt>だいがく</rt></ruby>。</p>'
+            '<p><ruby>大学<rt>だいがく</rt></ruby>。</p></body>',
+        ),
+    ],
+)
+def test_furigana_repeat_limit(test_case, xml_str, limit, expected_xml_str):
+    template = """
+    <?xml version='1.0' encoding='utf-8'?>
+    <html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" xml:lang="ja" class="hltr">
+    {}
+    </html>
+    """.strip()
+
+    tree = ET.fromstring(template.format(xml_str))
+
+    process_tree(tree, "add", furigana_repeat_limit=limit)
+
+    expected_tree = ET.fromstring(template.format(expected_xml_str))
+
+    assert ET.tostring(tree, encoding='unicode') == ET.tostring(expected_tree, encoding='unicode')

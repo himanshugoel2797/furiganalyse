@@ -1,9 +1,11 @@
 import logging
 import re
-from typing import Tuple, List, Iterable, Optional, Set
+from collections import defaultdict
+from typing import Tuple, List, Dict, Iterable, Optional, Set
 from xml.etree import ElementTree as ET
+from xml.sax.saxutils import escape as xml_escape
 
-from furigana.furigana import create_furigana_html
+from furigana.furigana import split_furigana
 
 from furiganalyse.params import FuriganaMode
 
@@ -11,20 +13,30 @@ NAMESPACE = "{http://www.w3.org/1999/xhtml}"
 
 
 def process_html(
-    inputfile: str, mode: FuriganaMode, exclude_words: Optional[Set[str]] = None
+    inputfile: str,
+    mode: FuriganaMode,
+    exclude_words: Optional[Set[str]] = None,
+    furigana_repeat_limit: Optional[int] = None,
 ) -> ET.ElementTree:
     tree = ET.parse(inputfile)
-    process_tree(tree, mode, exclude_words)
+    process_tree(tree, mode, exclude_words, furigana_repeat_limit)
     return tree
 
 
 def process_tree(
-    tree: ET.ElementTree, mode: FuriganaMode, exclude_words: Optional[Set[str]] = None
+    tree: ET.ElementTree,
+    mode: FuriganaMode,
+    exclude_words: Optional[Set[str]] = None,
+    furigana_repeat_limit: Optional[int] = None,
 ):
     parent_map = dict((c, p) for p in tree.iter() for c in p)
 
     if mode in {"remove", "replace"}:
         remove_existing_furigana(tree, parent_map)
+
+    # Counter shared across all elements in the tree, so the repeat limit is
+    # applied document-wide rather than per-paragraph.
+    repeat_counts: Dict[Tuple[str, str], int] = defaultdict(int)
 
     if mode in {"add", "replace"}:
         ps = tree.findall(f'.//{NAMESPACE}*')
@@ -32,8 +44,8 @@ def process_tree(
             # Exclude ruby related tags, we don't want to override them (unless we have removed them before)
             if not inside_ruby_subtag(p, parent_map):
                 logging.debug(f">>> BEFORE {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
-                process_head(p, exclude_words)
-                process_tail(p, parent_map[p], exclude_words)
+                process_head(p, exclude_words, furigana_repeat_limit, repeat_counts)
+                process_tail(p, parent_map[p], exclude_words, furigana_repeat_limit, repeat_counts)
                 logging.debug(f">>> AFTER  {p.tag} > '{p.text}' {list(p)} '{p.tail}'")
 
         # Add the namespace to our new elements
@@ -88,7 +100,12 @@ def remove_existing_furigana(tree: ET.ElementTree, parent_map: dict):
         parent_elem.remove(elem)
 
 
-def process_head(elem: ET.Element, exclude_words: Optional[Set[str]] = None):
+def process_head(
+    elem: ET.Element,
+    exclude_words: Optional[Set[str]] = None,
+    furigana_repeat_limit: Optional[int] = None,
+    repeat_counts: Optional[Dict[Tuple[str, str], int]] = None,
+):
     """
     Process the text that is before the children of the given element.
     """
@@ -98,7 +115,9 @@ def process_head(elem: ET.Element, exclude_words: Optional[Set[str]] = None):
     text = elem.text.strip()
     if contains_kanji(text):
 
-        head, children, tail = create_parsed_furigana_html(text, exclude_words)
+        head, children, tail = create_parsed_furigana_html(
+            text, exclude_words, furigana_repeat_limit, repeat_counts
+        )
 
         # Replace the original text by the ruby childs "head"
         elem.text = head
@@ -109,7 +128,11 @@ def process_head(elem: ET.Element, exclude_words: Optional[Set[str]] = None):
 
 
 def process_tail(
-    elem: ET.Element, parent_elem: ET.Element, exclude_words: Optional[Set[str]] = None
+    elem: ET.Element,
+    parent_elem: ET.Element,
+    exclude_words: Optional[Set[str]] = None,
+    furigana_repeat_limit: Optional[int] = None,
+    repeat_counts: Optional[Dict[Tuple[str, str], int]] = None,
 ):
     """
     Process the text that is before the children of the given element.
@@ -120,7 +143,9 @@ def process_tail(
     text = elem.tail.strip()
     if contains_kanji(text):
 
-        head, children, tail = create_parsed_furigana_html(text, exclude_words)
+        head, children, tail = create_parsed_furigana_html(
+            text, exclude_words, furigana_repeat_limit, repeat_counts
+        )
 
         # Replace the original tail by the rubys "head"
         elem.tail = head
@@ -132,13 +157,18 @@ def process_tail(
 
 
 def create_parsed_furigana_html(
-    text: str, exclude_words: Optional[Set[str]] = None
+    text: str,
+    exclude_words: Optional[Set[str]] = None,
+    furigana_repeat_limit: Optional[int] = None,
+    repeat_counts: Optional[Dict[Tuple[str, str], int]] = None,
 ) -> Tuple[str, List[ET.Element], str]:
     """
     Generate the furigana and return it parsed: "head" text, <ruby> children, "tail" text.
     """
     try:
-        new_text = create_furigana_html(text, exclude_words=exclude_words)
+        new_text = generate_furigana_html(
+            text, exclude_words, furigana_repeat_limit, repeat_counts
+        )
     except Exception:
         logging.warning("Something wrong happened when retrieving furigana for '%s'", text)
         new_text = text
@@ -152,6 +182,49 @@ def create_parsed_furigana_html(
 
     # Return the parts that will need to be integrated in the XML tree
     return elem.text, list(elem), elem.tail
+
+
+def generate_furigana_html(
+    text: str,
+    exclude_words: Optional[Set[str]] = None,
+    furigana_repeat_limit: Optional[int] = None,
+    repeat_counts: Optional[Dict[Tuple[str, str], int]] = None,
+) -> str:
+    """
+    Generate the furigana HTML, optionally suppressing the reading once a given
+    (kanji, reading) pair has already been annotated `furigana_repeat_limit` times.
+    """
+    parts = []
+    for pair in split_furigana(text, exclude_words=exclude_words):
+        if pair.furigana and _should_suppress_furigana(
+            pair.text, pair.furigana, furigana_repeat_limit, repeat_counts
+        ):
+            parts.append(_xml_escape(pair.text))
+        elif pair.furigana:
+            parts.append(
+                "<ruby>%s<rt>%s</rt></ruby>"
+                % (_xml_escape(pair.text), _xml_escape(pair.furigana))
+            )
+        else:
+            parts.append(_xml_escape(pair.text))
+    return "".join(parts)
+
+
+def _should_suppress_furigana(
+    kanji_text: str,
+    reading: str,
+    furigana_repeat_limit: Optional[int],
+    repeat_counts: Optional[Dict[Tuple[str, str], int]],
+) -> bool:
+    if not furigana_repeat_limit or furigana_repeat_limit <= 0 or repeat_counts is None:
+        return False
+    key = (kanji_text, reading)
+    repeat_counts[key] += 1
+    return repeat_counts[key] > furigana_repeat_limit
+
+
+def _xml_escape(data: str) -> str:
+    return xml_escape(data, entities={"'": "&apos;", '"': "&quot;"})
 
 
 kanji_pattern = re.compile("[一-龯]")
